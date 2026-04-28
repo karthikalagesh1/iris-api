@@ -5,11 +5,18 @@ import numpy as np
 
 app = FastAPI()
 
-# Train model at startup
+# Load dataset
 iris = load_iris()
-model = DecisionTreeClassifier(random_state=42)
+
+# IMPORTANT FIX: ensure deterministic training
+model = DecisionTreeClassifier(
+    random_state=42,
+    max_depth=None
+)
+
 model.fit(iris.data, iris.target)
-class_names = ["setosa", "versicolor", "virginica"]
+
+class_names = iris.target_names.tolist()
 
 @app.get("/health")
 async def health():
@@ -17,6 +24,13 @@ async def health():
 
 @app.get("/predict")
 async def predict(sl: float, sw: float, pl: float, pw: float):
+
+    # IMPORTANT: keep exact feature order
     features = np.array([[sl, sw, pl, pw]])
-    pred = int(model.predict(features)[0])
-    return {"prediction": pred, "class_name": class_names[pred]}
+
+    pred = model.predict(features)[0]
+
+    return {
+        "prediction": int(pred),
+        "class_name": class_names[int(pred)]
+    }
